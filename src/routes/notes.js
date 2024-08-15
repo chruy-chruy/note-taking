@@ -23,7 +23,7 @@ router.post('/', verifyToken, async (req, res) => {
 router.get('/', verifyToken, async (req, res) => {
   try {
     const notes = await Note.find({ user: req.user._id });
-    res.json(notes);
+    res.status(200).json(notes);
   } catch (err) {
     res.status(500).json({ message: 'Error retrieving notes', error: err });
   }
@@ -36,7 +36,7 @@ router.get('/:noteId', verifyToken, async (req, res) => {
     if (!note || note.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Not authorized to view this note' });
     }
-    res.json(note);
+    res.status(200).json(note);
   } catch (err) {
     res.status(500).json({ message: 'Error retrieving note', error: err });
   }
@@ -52,7 +52,7 @@ router.put('/:noteId', verifyToken, async (req, res) => {
     note.title = req.body.title;
     note.content = req.body.content;
     await note.save();
-    res.json(note);
+    res.status(200).json(note);
   } catch (err) {
     res.status(500).json({ message: 'Error updating note', error: err });
   }
