@@ -1,0 +1,152 @@
+openapi: 3.0.0
+info:
+  title: Notes API
+  description: API for managing notes with authentication.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000/api
+    description: Development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Note:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Unique identifier for the note
+        title:
+          type: string
+          description: Title of the note
+        content:
+          type: string
+          description: Content of the note
+        user:
+          type: string
+          description: ID of the user who created the note
+      required:
+        - title
+        - content
+
+security:
+  - bearerAuth: []
+
+paths:
+  /notes:
+    post:
+      summary: Create a new note
+      description: Creates a new note associated with the authenticated user.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Note'
+      responses:
+        '201':
+          description: Note created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+        '500':
+          description: Server error
+
+    get:
+      summary: Retrieve all notes
+      description: Retrieves a list of notes for the authenticated user.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A list of notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Note'
+        '500':
+          description: Server error
+
+  /notes/{noteId}:
+    get:
+      summary: Retrieve a specific note
+      description: Retrieves details of a specific note by ID.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Note details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+        '403':
+          description: Not authorized to view this note
+        '500':
+          description: Server error
+
+    put:
+      summary: Update a specific note
+      description: Updates an existing note by ID.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Note'
+      responses:
+        '200':
+          description: Note updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+        '403':
+          description: Not authorized to update this note
+        '500':
+          description: Server error
+
+    delete:
+      summary: Delete a specific note
+      description: Deletes a note by ID.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Note deleted successfully
+        '403':
+          description: Not authorized to delete this note
+        '404':
+          description: Note not found
+        '500':
+          description: Server error

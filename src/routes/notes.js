@@ -1,78 +1,82 @@
 const express = require('express');
-const Note = require('../models/Note');
-
 const router = express.Router();
+const Note = require('../models/Note');
+const { verifyToken } = require('../middleware/auth');
+
 
 // Create a new note
-router.post('/', async (req, res) => {
-  const { title, content } = req.body;
-
+router.post('/', verifyToken, async (req, res) => {
   try {
     const note = new Note({
-      title,
-      content,
+      title: req.body.title,
+      content: req.body.content,
+      user: req.user._id
     });
     await note.save();
     res.status(201).json(note);
-  } catch (error) {
-    res.status(400).json({ message: 'Error creating note', error });
+  } catch (err) {
+    res.status(500).json({ message: 'Error creating note', error: err });
   }
 });
 
-// Get all notes
-router.get('/', async (req, res) => {
+// Retrieve all notes
+router.get('/', verifyToken, async (req, res) => {
   try {
-    const notes = await Note.find();
+    const notes = await Note.find({ user: req.user._id });
     res.json(notes);
-  } catch (error) {
-    res.status(400).json({ message: 'Error retrieving notes', error });
+  } catch (err) {
+    res.status(500).json({ message: 'Error retrieving notes', error: err });
   }
 });
 
-// Get a specific note by ID
-router.get('/:id', async (req, res) => {
+// Retrieve a specific note
+router.get('/:noteId', verifyToken, async (req, res) => {
   try {
-    const note = await Note.findById(req.params.id);
-
-    if (!note) {
-      return res.status(404).json({ message: 'Note not found' });
+    const note = await Note.findById(req.params.noteId);
+    if (!note || note.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to view this note' });
     }
-
     res.json(note);
-  } catch (error) {
-    res.status(400).json({ message: 'Error retrieving note', error });
+  } catch (err) {
+    res.status(500).json({ message: 'Error retrieving note', error: err });
   }
 });
 
-// Update a note by ID
-router.put('/:id', async (req, res) => {
-  const { title, content } = req.body;
-
+// Update a note
+router.put('/:noteId', verifyToken, async (req, res) => {
   try {
-    const note = await Note.findByIdAndUpdate(req.params.id, { title, content }, { new: true });
-
-    if (!note) {
-      return res.status(404).json({ message: 'Note not found' });
+    const note = await Note.findById(req.params.noteId);
+    if (!note || note.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to update this note' });
     }
-
+    note.title = req.body.title;
+    note.content = req.body.content;
+    await note.save();
     res.json(note);
-  } catch (error) {
-    res.status(400).json({ message: 'Error updating note', error });
+  } catch (err) {
+    res.status(500).json({ message: 'Error updating note', error: err });
   }
 });
 
-// Delete a note by ID
-router.delete('/:id', async (req, res) => {
+// Delete a specific note by ID
+router.delete('/:noteId', verifyToken, async (req, res) => {
   try {
-    const note = await Note.findByIdAndDelete(req.params.id);
+    const noteId = req.params.noteId;
+
+    // Check if the note exists and belongs to the authenticated user
+    const note = await Note.findOne({ _id: noteId, user: req.user._id });
 
     if (!note) {
-      return res.status(404).json({ message: 'Note not found' });
+      return res.status(404).json({ message: 'Note not found or you do not have permission to delete it.' });
     }
 
-    res.json({ message: 'Note deleted' });
-  } catch (error) {
-    res.status(400).json({ message: 'Error deleting note', error });
+    // Delete the note
+    await Note.deleteOne({ _id: noteId });
+
+    res.status(200).json({ message: 'Note deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting note:', err);
+    res.status(500).json({ message: 'An error occurred while deleting the note', error: err.message });
   }
 });
 
